@@ -22,31 +22,10 @@
 ![软件架构图](https://raw.githubusercontent.com/lightyeah/2016HeShuju/master/1.jpg)  
 
 * 界面分区（ui） 
-    - 工具栏 *文档操作、用户设置、快捷按钮、用户帮助*
-    - 控制面板 *参数设置、测量动作、采集控制*
-    - 数据显示 *峰位、计数、道宽、工作状态信息*
-    - 绘图区 *总体图、感兴趣图*
-* 数据处理(dataprocessor)  
-    - 从下位机获取数据 *在内存有一个队列，存储临时用的数据*
-    - 传递数据给数据库存储 *也可以调用以前的数据*
-    - 绘图 *在内存上绘图，传递图片，解决闪烁问题*  
-    **绘图到底交给dataprocessor处理还是UI处理有待商讨**
-    - 给界面传递绘图数据 *传递图片*
-    - 从界面获得用户操作信息 *下位机控制参数、绘图参数*
-* 数据库（database） 
-    - 设定数据格式
-    - 存储数据
-    - 调用数据
-    - 存成其他格式
-* 下位机(hardware)  
-    - 与硬件通信，获取数据
-    - 控制硬件参数  
-### 各个模块编程接口
-* ui
     - 工具栏  
-        - 顶栏  
+        - 顶栏    
         *文件* -> *打开* |*保存* |*另存为* |*退出*  
-        *数据采集* -> *选择端口* |*连接* |*开始采集* |*暂停* |*停止*  
+        *数据采集* -> *选择端口* |*开始采集* |*暂停* |*停止*  
         *数据显示* -> *静态显示* |*动态显示* |*刷新* |*量程设置*->*手动* |*自动*  
         *数据处理* -> *平滑处理* |*数据输出* |*显示峰位*  
         *下位机控制* -> *采集方式* -> *计数* |*计时* ||*参数设置*  
@@ -70,9 +49,90 @@
         *工作总计数*  
         *最高峰位* & *最高峰计数* & *最高峰半高宽*  
         *感兴趣区* -> *局部最高峰位*&*局部最高峰计数* |*局部总计数* |*局部半高宽*
-    - 绘图区
+    - 绘图区 
+        - 绘图 *在内存上绘图，传递图片，解决闪烁问题*  
+        - 平滑处理图像，在图上计算半高宽
+        - 处理数据 得到数据显示所需要的数据
+* 数据处理(dataprocessor)  
+    - 多线程任务：数据读取存储和绘图调用分开处理，绘图每1s更新一次，但是数据读取一直在后台运行
+    - 从下位机获取数据 *在内存有一个队列，存储临时用的数据*
+    - 传递数据给数据库存储 *也可以调用以前的数据*
+    - 给界面传递绘图数据 *传递图片*
+    - 从界面获得用户操作信息 *下位机控制参数、绘图参数*
+* 数据库（database） 
+    - 设定数据格式
+    - 存储数据
+    - 调用数据
+    - 存成其他格式
+* 下位机(hardware)  
+    - 与硬件通信，获取数据
+    - 控制硬件参数  
+### 各个模块编程接口  *variable/widget->function*    
+* ui  
+    - 工具栏
+        + private
+            * findAllPort();//显示所有可用端口 ！！如何获得设备端口信息？？
+            * DataPortSelect -> selectDataPort();//用户选择端口
+            * exit()//!!!退出程序之前要注意内存清理和释放
+            * clearData();
+        + public
+    - 控制面板
+        + private
+            * clearData();
+        + public
+    - 数据显示 0.1s更新一次数据
+        + private
+            * CollectWorkTime;
+            * TIMER  0.1s
+        + public
+            * clearData();
+    - 绘图 0.1s一次
+        + private
+            * TotalCounts;//总计数
+            * PeakAdress;
+            * PeakCounts;
+            * PartPeakAdress;
+            * PartPeakCounts;
+            * PaintTimer;//0.1s一次
+        + public
+            * getData(name,value);//数据显示调用各种数据
+            * clearData();//
+* dataprocessor
+    - private
+        + dataqueue OriginOrderQueue[];//原始数据队列
+        + dataarray RankedQueue[];//排列后的数据，按道指排列，绘图需要
+    - public
+        + userHardwareSetting(hardwareparameter);//用户硬件参数设置
+        + selectDataPort(port);//选择端口
+        + startCollectData();//开始工作，停止结束由ui决定
+        + stopCollectData();//停止数据测量
+        + getRankedData(dataarray& returnqueue);// ui 1s一次获取绘图数据 ！！如何设置数据只读指针？？
+        + saveDataFile(name,path,filetype);
+        + openDataFile(name,path);
+        + clearData();
+* hardware
+    - private
+        + openPort(port);
+        + DataQueue;//数据做队列处理
+        + collectData();
+    - public
+        + selectDataPort(port);
+        + setHardware(hardwareparameter)//设置硬件
+        + startCollecData();
+        + stopCollecData();
+        + getData();
+* database
+    - private
+        + sql //！！数据库管理？？
+    - public
+        + typedef DataPoint datapoint
+        + saveDataFile(name,path,filetype,dataqueue,rankedqueue);
+        + openDataFile(path,name,filetype);
+    
+
 
 ***  
 ## 硬件  
 *——"叶一锰"*  
-***  
+
+
